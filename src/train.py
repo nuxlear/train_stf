@@ -103,9 +103,8 @@ def train(rank, args):
         if 1 < args.n_gpu:
             model = DistributedDataParallel(model, device_ids=[rank])
         return model 
-    # weight_path = 'weights/vision2/loadfrom_mask_v7_tanh_bs-144_lr-0.0005_mel_ps_80/005.pth'
-    weight_path = None
-    model = load_model(weight_path)
+    
+    model = load_model(args.load_from)
 
     args.batch_size = args.batch_size_per_gpu * args.n_gpu
     args.num_workers = args.num_workers_per_gpu * args.n_gpu
@@ -225,6 +224,8 @@ def arg_parse():
     parser.add_argument('--num_workers_per_gpu', type=int, default=9)
     
     parser.add_argument('--optimizer', type=str, default='Adam_Default')
+    parser.add_argument('--load_from', type=str, default=None)
+    
     args = parser.parse_args()
     
     args.data_root = ast.literal_eval(args.data_root)
