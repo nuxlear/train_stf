@@ -470,7 +470,52 @@ def calc_poly_pwb_side_v39_1(pts, h, randomness=True):
     p01 = pts[1] - rand(0.01, 0.10)*(pts[1] - p0)
     
     #pts = [p0, p15, p13, p12, p11, p10, p08, p06, p05, p04, p03, p01]
-    pts = [p0, p15, p13, p12, p10, p08, p06, p05, p04, p03, p01]
+    pts = [p0,  
+           p15, p13, p12, p10, p08, p06, p05, p04, p03, p01]
+    return np.round(np.array(pts)).astype(np.int32)
+
+def calc_poly_pwb_front_v39_0(pts, h, randomness=True):
+    
+    def rand_(a, b, randomness=True):
+        if randomness:
+            r = random.random()
+            return a + (b-a)*r
+        else:
+            return (a+b)/2
+        
+    def rand(s, e):
+        return rand_(s, e, randomness)
+    
+    p0 = [pts[27][0], pts[27][1] + h*0.09]
+    #p0 = pts[27]
+    y10 = h*0.87
+    y6 =  y10
+    y8 =  y10
+    
+    p15 = pts[15] - rand(0.01, 0.08)*(pts[15] - p0)
+    p13 = pts[13] - rand(0.01, 0.08)*(pts[13] - pts[30])
+    p12 = pts[12] - rand(0.01, 0.05)*(pts[12] - pts[30])
+    p12[0] = p13[0] + h*0.01
+    
+    
+    p10 = [pts[9][0], y10]
+    p08 = [pts[8][0], y8]
+    p06 = [pts[7][0], y6]
+    
+    p01 = pts[1] - rand(0.01, 0.10)*(pts[1] - p0)
+    p03 = pts[3] - rand(0.01, 0.10)*(pts[3] - pts[30])
+    p04 = pts[4] - rand(0.01, 0.05)*(pts[4] - pts[30])
+    p04[0] = p03[0] - h*0.01
+    
+    
+    pts = [p0,  # 미간
+           p15, p13, p12,
+           # p11, # 우리가 보기에 오른쪽. p15가 위, p11이 아래 
+           p10, p08, p06, # 맨 아래 
+           #p05,
+           p04, p03, p01] # 우리가 보기에 왼쪽, p01 이 위, p05가 아래
+        
+        
     return np.round(np.array(pts)).astype(np.int32)
 
 calc_poly = {
@@ -486,4 +531,5 @@ calc_poly = {
     24:calc_poly_v24,
     'pwb_side_v39': calc_poly_pwb_side_v39,
     'pwb_side_v39_1': calc_poly_pwb_side_v39_1,
+    'pwb_front_v39_0': calc_poly_pwb_front_v39_0
 }
