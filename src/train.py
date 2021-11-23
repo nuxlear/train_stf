@@ -55,13 +55,26 @@ def ddp_clean():
     destroy_process_group()
 
 
+def save_checkpoint(model, optimizer, log_name, epoch, n_gpu):
+    path = f'weights/{log_name[:-3]}/{epoch:03d}.pth'
+    print('save checkpoint : ', path)
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    if 1 < n_gpu:
+        t = model.module
+    else:
+        t = model
+    checkpoint = {'state_dict':t.state_dict(),
+                  'optimizer': optimizer.state_dict()}
+    torch.save(checkpoint, path)
+
+
 def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, dataloader, device, rank):
     global global_idx
     model.train()
     loss_epoch = 0 
     loss_count = 0
     #for idx, (img_gt, mel, img_gt_masked, _, ips) in enumerate(tqdm(dataloader)):
-    for idx, (img_gt, mel, ips) in enumerate(tqdm(dataloader)):
+    for idx, (img_gt, mel, ips) in enumerate(tqdm(dataloader, dynamic_ncols=True)):
 
         audio = mel.unsqueeze(1).to(device)
         ips = ips.to(device).permute(0,3,1,2)
@@ -99,12 +112,17 @@ def train(rank, args):
     def load_model(weight_path=None):
         model = ae.Speech2Face(3, (3, args.img_size, args.img_size), (1, 96, 108)).to(device)
         if weight_path:
-            model.load_state_dict(torch.load(weight_path, map_location=device))
+            checkpoint = torch.load(weight_path, map_location=device)
+            print('!!!### load model : ', weight_path)
+            if 'state_dict' in checkpoint:
+                model.load_state_dict(checkpoint['state_dict'])
+            else:
+                model.load_state_dict(checkpoint)
         if 1 < args.n_gpu:
             model = DistributedDataParallel(model, device_ids=[rank])
-        return model 
+        return model, checkpoint
     
-    model = load_model(args.load_from)
+    model, checkpoint = load_model(args.load_from)
 
     args.batch_size = args.batch_size_per_gpu * args.n_gpu
     args.num_workers = args.num_workers_per_gpu * args.n_gpu
@@ -120,8 +138,6 @@ def train(rank, args):
         print('invalid len(train_images):', len(args.train_images))
         print(args.data_root)
         return
-
-
 
     log_name = f'{args.optimizer}_{args.mask_ver}_bs-{args.batch_size}_lr-{args.lr}_mel_ps_{args.mel_ps}_{now_str()}'
     print('log_name:', log_name)
@@ -142,6 +158,10 @@ def train(rank, args):
         
     elif args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.995, nesterov=True)
+
+    if 'optimizer' in checkpoint:
+        print('!!!### load optimizer : ', args.load_from)
+        optimizer.load_state_dict(checkpoint['optimizer'])
 
     criterion = nn.L1Loss()
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args.lr, 
@@ -170,13 +190,7 @@ def train(rank, args):
             dist.barrier()
         
         if 0 == rank:
-            path = f'weights/{log_name[:-3]}/{epoch:03d}.pth'
-            Path(path).parent.mkdir(parents=True, exist_ok=True)
-            if 1 < args.n_gpu:
-                t = model.module
-            else:
-                t = model
-            torch.save(t.state_dict(), path)
+            save_checkpoint(model, optimizer, log_name=log_name, epoch=epoch, n_gpu=args.n_gpu)
             
         if train_sampler: 
             dist.barrier()
