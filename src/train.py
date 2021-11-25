@@ -111,6 +111,7 @@ def train(rank, args):
 
     def load_model(weight_path=None):
         model = ae.Speech2Face(3, (3, args.img_size, args.img_size), (1, 96, 108)).to(device)
+        checkpoint = None
         if weight_path:
             checkpoint = torch.load(weight_path, map_location=device)
             if 'state_dict' in checkpoint:
@@ -160,7 +161,7 @@ def train(rank, args):
     elif args.optimizer == 'SGD':
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.995, nesterov=True)
 
-    if 'optimizer' in checkpoint:
+    if checkpoint is not None and 'optimizer' in checkpoint:
         print('!!!### load optimizer checkpoint["optimizer"]: ', weight_path)
         optimizer.load_state_dict(checkpoint['optimizer'])
 
