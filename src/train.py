@@ -113,10 +113,11 @@ def train(rank, args):
         model = ae.Speech2Face(3, (3, args.img_size, args.img_size), (1, 96, 108)).to(device)
         if weight_path:
             checkpoint = torch.load(weight_path, map_location=device)
-            print('!!!### load model : ', weight_path)
             if 'state_dict' in checkpoint:
+                print('!!!### load model checkpoint["state_dict"]: ', weight_path)
                 model.load_state_dict(checkpoint['state_dict'])
             else:
+                print('!!!### load model checkpoint : ', weight_path)
                 model.load_state_dict(checkpoint)
         if 1 < args.n_gpu:
             model = DistributedDataParallel(model, device_ids=[rank])
@@ -160,7 +161,7 @@ def train(rank, args):
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.995, nesterov=True)
 
     if 'optimizer' in checkpoint:
-        print('!!!### load optimizer : ', args.load_from)
+        print('!!!### load optimizer checkpoint["optimizer"]: ', weight_path)
         optimizer.load_state_dict(checkpoint['optimizer'])
 
     criterion = nn.L1Loss()
@@ -255,6 +256,7 @@ if __name__ == "__main__":
     args = arg_parse()
     
     args.n_gpu = len(os.environ['CUDA_VISIBLE_DEVICES'].split(','))
+    print('!!!### n_gpu : ', args.n_gpu)
     args.port = master_port
 
     print('master port:', args.port)
