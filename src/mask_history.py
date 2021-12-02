@@ -517,6 +517,8 @@ def calc_poly_pwb_front_v39_0(pts, h, randomness=True):
         
         
     return np.round(np.array(pts)).astype(np.int32)
+
+
 # 박은보, 옆모습, 아주 많이 가림
 def calc_poly_pwb_side_v39(pts, h, randomness=True):
     
@@ -585,6 +587,51 @@ def calc_poly_pwb_side_v39_1(pts, h, randomness=True):
            p15, p13, p12, p10, p08, p06, p05, p04, p03, p01]
     return np.round(np.array(pts)).astype(np.int32)
 
+
+# 박은보, 정면, 아주 많이 가림
+# calc_poly_pwb_side_v39 보다 더 많이 가림
+# y10 : 99 -> 0.80 로 함
+def calc_poly_pwb_side_v39_11(pts, h, randomness=True):
+    
+    def rand(a, b):
+        if randomness:
+            r = random.random()
+            return a + (b-a)*r
+        else:
+            return (a+b)/2
+    
+    p0 = pts[27]
+    y10 = h*0.80
+    y6 =  y10
+    y8 =  y10
+    
+    p15 = pts[15] + rand(0.04, 0.08)*(pts[15] - p0)
+    p13 = pts[13] + rand(0.04, 0.08)*(pts[13] - pts[30])
+    p12 = pts[12] + rand(0.04, 0.08)*(pts[12] - pts[30])
+    p11 = pts[11] + rand(0.04, 0.08)*(pts[11] - pts[30])
+    p11[0] = pts[11][0] + rand(0.18, 0.22)*(pts[11][0] - pts[30][0])
+    
+    p10 = pts[10] + rand(0.12, 0.18)*(pts[10] - pts[30])
+    p08 = pts[9]  + rand(0.12, 0.18)*(pts[9] - pts[30])
+    p06 = pts[8]  + rand(0.12, 0.18)*(pts[8] - pts[30])
+    p05 = pts[5]  + rand(0.12, 0.18)*(pts[5] - pts[30])
+    p05[0] = pts[5][0]  + rand(0.18, 0.22)*(pts[5][0] - pts[30][0])
+    
+    p04 = pts[4]  + rand(0.12, 0.18)*(pts[4] - pts[30])
+    p03 = pts[3]  + rand(0.12, 0.18)*(pts[3] - pts[30])
+    p01 = pts[1]  + rand(0.12, 0.18)*(pts[1] - p0)
+    
+    #p11[0] = pts[11][0]
+    p10[1] = y10
+    p08[1] = y10
+    p06[1] = y10 
+    #p05[0] = pts[5][0]
+    
+    pts = [p0, p15, p13, p12, p11, p10, p08, p06, p05, p04, p03, p01]
+    #pts = [p0, p15, p13, p12, p10, p08, p06, p05, p04, p03, p01]
+    return np.round(np.array(pts)).astype(np.int32)
+
+
 def calc_poly_pwb_front_v39_1(pts, h, randomness=True):
     
     def rand_(a, b, randomness=True):
@@ -636,6 +683,7 @@ calc_poly = {
     24:calc_poly_v24,
     'pwb_side_v39': calc_poly_pwb_side_v39,
     'pwb_side_v39_1': calc_poly_pwb_side_v39_1,
+    'pwb_side_v39_11': calc_poly_pwb_side_v39_11,
     'pwb_front_v39_0': calc_poly_pwb_front_v39_0,
     'pwb_front_v39_1': calc_poly_pwb_front_v39_1
 }
