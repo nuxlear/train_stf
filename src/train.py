@@ -113,7 +113,7 @@ def train(rank, args):
         model = ae.Speech2Face(3, (3, args.img_size, args.img_size), (1, 96, 108)).to(device)
         checkpoint = None
         if weight_path:
-            checkpoint = torch.load(weight_path, map_location=device)
+            checkpoint = torch.load(weight_path, map_location='cpu')
             if 'state_dict' in checkpoint:
                 print('!!!### load model checkpoint["state_dict"]: ', weight_path)
                 model.load_state_dict(checkpoint['state_dict'])
@@ -162,8 +162,9 @@ def train(rank, args):
         optimizer = torch.optim.SGD(model.parameters(), lr=args.lr, momentum=0.995, nesterov=True)
 
     if checkpoint is not None and 'optimizer' in checkpoint:
-        print('!!!### load optimizer checkpoint["optimizer"]: ', weight_path)
+        print('!!!### load optimizer checkpoint["optimizer"]: ', args.load_from)
         optimizer.load_state_dict(checkpoint['optimizer'])
+    del checkpoint
 
     criterion = nn.L1Loss()
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args.lr, 
