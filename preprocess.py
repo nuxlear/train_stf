@@ -21,12 +21,18 @@ def get_clip_count(clip_name, val_cnt, seed=1234):
     clip_train = list(set(clips) - set(clip_val))
     print('파일을 하나씩 보여줍니다.')
     print('train:', clip_train[0])
-    print('val:', clip_val[0])
+    if len(clip_val) > 0:
+        print('val:', clip_val[0])
+    else:
+        print('val: None')
     print('train count :', len(clip_train), ', valcount:', len(clip_val))
     return {'clip_train':clip_train, 'clip_val':clip_val}
 
 
 def make(data_root, clip_train, clip_val):
+    if os.path.exists(data_root):
+        print(data_root, ' 가 이미 존재합니다.')
+        return
     # data_root 폴더를 삭제하고 다시 만든다
     shutil.rmtree(data_root, ignore_errors=True)
     Path(f'{data_root}/train').mkdir(parents=True)
