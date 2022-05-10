@@ -70,6 +70,15 @@ def resize_adapt(args, img):
     board[(sz-h)//2:(sz-h)//2+h, (sz-w)//2:(sz-w)//2+w] = img
     return board
 
+    
+def resize_adapt_pts(args, img, pts):
+    sz = args.img_size
+    h, w = img.shape[:2]
+    r = sz/max(h,w)
+    pts = pts * r
+    pts = np.round(np.array(pts)).astype(np.int32)
+    return pts
+
 def masking(im, pts):
     h, w = im.shape[:2]
     im = cv2.fillPoly(im, [pts], (128,128,128))
@@ -103,6 +112,7 @@ class LipGanDS(Dataset):
         if phase == 'val' or args.mask_img_trsf_ver < 0:
             self.mask_img_trsf = id_map
         else:
+            print('mask_img_trsf_ver: ', args.mask_img_trsf_ver)
             self.mask_img_trsf = mask_img_trsfs[args.mask_img_trsf_ver]
             
             
@@ -231,6 +241,7 @@ class LipGanDS(Dataset):
         if gt_audio_only:
             masked = np.zeros((16,16,3), np.uint8)
             pts = None
+            masked = resize_adapt(args, masked)
         else:
             preds = self.read_pickle(dir_name)
             if preds[sidx] is None:
@@ -240,9 +251,9 @@ class LipGanDS(Dataset):
             mask_ver = random.choice(self.mask_ver)
             randomness = False if self.phase == 'val' else True
             pts = calc_poly[mask_ver](preds[sidx], masked.shape[0], randomness)
-            
+            pts = resize_adapt_pts(args, masked, pts)
+            masked = resize_adapt(args, masked)
             masked = masking(masked, pts)
-        masked = resize_adapt(args, masked)
         
         img_ips = []
         for ip_fname in ip_fnames:
