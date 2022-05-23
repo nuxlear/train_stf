@@ -13,13 +13,14 @@ import ast
 
 import autoencoder as ae
 import torch
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 import torch.nn as nn
 #from torchinfo import summary
 import torch.multiprocessing as mp
 from torch.distributed import init_process_group, destroy_process_group
 from torch.nn.parallel import DistributedDataParallel
 import torch.distributed as dist
+from PIL import Image
 
 from datagen_aug import LipGanDS
 
@@ -37,6 +38,8 @@ import cv2
 import traceback
 import sys
 from addict import Dict
+import pdb
+
 
 torch.backends.cudnn.benchmark = True
 USE_TANH  = True
@@ -67,6 +70,14 @@ def save_checkpoint(model, optimizer, log_name, epoch, n_gpu):
                   'optimizer': optimizer.state_dict()}
     torch.save(checkpoint, path)
 
+def invers_transfer(np_image):
+    print('1 np_image.shape:', np_image.shape)
+    np_image = (np_image + 1.0) *255.0 /2.0
+    np_image = np.clip(0, 255, np_image)
+    np_image = np_image.astype(np.uint8)
+    print('2 np_image.shape:', np_image.shape)
+    return np_image
+
 
 def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, dataloader, device, rank):
     global global_idx
@@ -75,7 +86,12 @@ def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, datalo
     loss_count = 0
     #for idx, (img_gt, mel, img_gt_masked, _, ips) in enumerate(tqdm(dataloader)):
     for idx, (img_gt, mel, ips) in enumerate(tqdm(dataloader, dynamic_ncols=True)):
-
+        if idx == 0 and rank == 0:
+            masked_img = ips[0][:,:,:3].cpu().numpy()
+            masked_img = masked_img[:,:,::-1]
+            masked_img = invers_transfer(masked_img)
+            writer.add_image('train/masked_image', masked_img, epoch, dataformats='HWC')
+            
         audio = mel.unsqueeze(1).to(device)
         ips = ips.to(device).permute(0,3,1,2)
         img_gt = img_gt.to(device).permute(0,3,1,2)
@@ -99,6 +115,7 @@ def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, datalo
         writer.add_scalar('train/loss', loss_epoch_mean, epoch) 
         if lr_scheduler is not None: 
             writer.add_scalar('lr', lr_scheduler.get_last_lr()[0], global_idx)
+        writer.flush()
 
 
 def now_str():
