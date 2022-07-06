@@ -171,7 +171,7 @@ class LipGanDS(Dataset):
 
             if self.mel_trsf_ver == 0:
                 if random.randint(0,1) == 0:
-                    mel_fnames = [dir_name/ f'mels_{i:02d}.npz' for i in range(10)]
+                    mel_fnames = [dir_name/ f'mels_{i:03d}.npz' for i in range(100)]
                     mel_fname_2 = random.choice(mel_fnames)
                     if Path(mel_fname_2).exists():
                         mel_fname = mel_fname_2
