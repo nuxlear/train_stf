@@ -27,6 +27,7 @@ from datagen_aug import LipGanDS
 from glob import glob
 from torch.utils.data import DataLoader, DistributedSampler
 
+from pytorch_warmup import LinearWarmup
 
 from torch.utils.data import DataLoader
 from tqdm import tqdm
@@ -79,7 +80,7 @@ def invers_transfer(np_image):
     return np_image
 
 
-def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, dataloader, device, rank):
+def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, warmup_scheduler, dataloader, device, rank):
     global global_idx
     model.train()
     loss_epoch = 0 
@@ -153,10 +154,10 @@ def train(rank, args):
     for data_root, stride in args.data_root.items():
         args.train_images += sorted(glob(f'{data_root}/train/*/*_yes.jpg'))[::stride]
         args.val_images += sorted(glob(f'{data_root}/val/*/*_yes.jpg'))[::stride]
-    if len(args.train_images) < 10000:
-        print('invalid len(train_images):', len(args.train_images))
-        print(args.data_root)
-        return
+    # if len(args.train_images) < 10000:
+    #     print('invalid len(train_images):', len(args.train_images))
+    #     print(args.data_root)
+    #     return
 
     log_name = f'{args.optimizer}_{args.mask_ver}_bs-{args.batch_size}_lr-{args.lr}_mel_ps_{args.mel_ps}_{now_str()}'
     print('log_name:', log_name)
@@ -186,7 +187,10 @@ def train(rank, args):
     criterion = nn.L1Loss()
     # scheduler = torch.optim.lr_scheduler.OneCycleLR(optimizer, max_lr=args.lr, 
     #                                                steps_per_epoch=len(dl), epochs=args.epochs)
-    scheduler = None
+    scheduler = torch.optim.lr_scheduler.MultiStepLR(optimizer, milestones=[int(x) for x in args.milestone.split(',')], last_epoch=-1)
+    warmup_scheduler = None
+    if isinstance(args.warmup_step, int) and args.warmup_step > 0:
+        warmup_scheduler = LinearWarmup(optimizer, warmup_period=args.warmup_step)
     
     ds = LipGanDS(args, phase='train')
     if 1 < args.n_gpu: 
@@ -204,7 +208,7 @@ def train(rank, args):
         if train_sampler:
             train_sampler.set_epoch(epoch)
             
-        train_epoch(epoch, model, criterion, optimizer, writer, scheduler, dl, device, rank)
+        train_epoch(epoch, model, criterion, optimizer, writer, scheduler, warmup_scheduler, dl, device, rank)
 
         if train_sampler:
             dist.barrier()
@@ -258,6 +262,8 @@ def arg_parse():
     parser.add_argument('--num_workers_per_gpu', type=int, default=9)
     
     parser.add_argument('--optimizer', type=str, default='Adam_Default')
+    parser.add_argument('--warmup_step', type=int, default=5)
+    parser.add_argument('--milestone', type=str, default='100,150')
     parser.add_argument('--load_from', type=str, default=None)
     
     args = parser.parse_args()
