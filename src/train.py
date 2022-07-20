@@ -109,7 +109,11 @@ def train_epoch(epoch, model, criterion, optimizer, writer, lr_scheduler, warmup
 
         optimizer.step()
         if lr_scheduler is not None:
-            lr_scheduler.step()
+            if warmup_scheduler is None:
+                lr_scheduler.step()
+            else:
+                with warmup_scheduler.dampening():
+                    lr_scheduler.step()
             
     loss_epoch_mean = loss_epoch / loss_count
     if rank == 0:  
